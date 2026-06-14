@@ -271,6 +271,64 @@
   @media (prefers-reduced-motion:reduce){
     *{animation:none !important; transition:none !important}
   }
+
+  /* ---------- tabs ---------- */
+  .tabs{display:inline-flex; gap:4px; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:4px; margin:22px 0 2px}
+  .tab{font-family:var(--mono); font-size:12.5px; letter-spacing:.04em; color:var(--muted); background:none; border:0; padding:9px 16px; border-radius:9px; cursor:pointer; transition:.15s}
+  .tab:hover{color:var(--text)}
+  .tab[aria-selected="true"]{background:var(--raised); color:var(--text)}
+  .view[hidden]{display:none}
+
+  /* ---------- scan form ---------- */
+  .scan-form{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px; margin:18px 0 0}
+  .scan-row{display:flex; gap:10px; flex-wrap:wrap}
+  .scan-row input[type=url]{flex:1; min-width:220px; background:var(--ink); border:1px solid var(--line); color:var(--text); font-family:var(--mono); font-size:14px; padding:12px 14px; border-radius:10px; outline:none}
+  .scan-row input[type=url]:focus{border-color:var(--accent)}
+  .btn{font-family:var(--mono); font-size:13px; font-weight:600; letter-spacing:.03em; color:var(--ink); background:var(--accent); border:0; padding:12px 20px; border-radius:10px; cursor:pointer; transition:.15s}
+  .btn:hover{filter:brightness(1.08)}
+  .btn:disabled{opacity:.5; cursor:not-allowed}
+  .btn.ghost{background:transparent; color:var(--text); border:1px solid var(--line)}
+  .auth-ack{display:flex; gap:9px; align-items:flex-start; margin-top:13px; color:var(--muted); font-size:12.5px; line-height:1.45}
+  .auth-ack input{margin-top:2px; accent-color:var(--accent); width:15px; height:15px; flex-shrink:0}
+  .scan-note{font-family:var(--mono); font-size:11px; color:var(--muted); margin-top:12px; letter-spacing:.02em}
+  .scan-msg{margin-top:14px; font-size:13.5px; padding:12px 14px; border-radius:10px; display:none}
+  .scan-msg.show{display:block}
+  .scan-msg.err{background:rgba(255,77,109,.10); border:1px solid rgba(255,77,109,.35); color:#ffb3c1}
+  .scan-msg.busy{background:var(--raised); border:1px solid var(--line); color:var(--muted)}
+
+  /* ---------- report ---------- */
+  .report{margin-top:22px}
+  .grade-card{display:flex; gap:20px; align-items:center; background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:22px; flex-wrap:wrap}
+  .grade-ring{width:96px; height:96px; border-radius:50%; display:grid; place-items:center; flex-shrink:0; font-family:var(--display); font-weight:700; font-size:44px; position:relative}
+  .grade-ring span.s{position:absolute; bottom:-2px; font-family:var(--mono); font-size:10px; font-weight:500; color:var(--muted); letter-spacing:.08em}
+  .grade-meta{min-width:0; flex:1}
+  .grade-meta .url{font-family:var(--mono); font-size:13.5px; color:var(--text); word-break:break-all}
+  .grade-meta .sub{font-family:var(--mono); font-size:11.5px; color:var(--muted); margin-top:6px; letter-spacing:.02em}
+  .grade-A{color:var(--low); box-shadow:inset 0 0 0 5px rgba(78,205,196,.30)}
+  .grade-B{color:#9fe07a; box-shadow:inset 0 0 0 5px rgba(159,224,122,.30)}
+  .grade-C{color:var(--med); box-shadow:inset 0 0 0 5px rgba(235,201,74,.30)}
+  .grade-D{color:var(--high); box-shadow:inset 0 0 0 5px rgba(255,159,69,.30)}
+  .grade-F{color:var(--crit); box-shadow:inset 0 0 0 5px rgba(255,77,109,.30)}
+  .dl-row{display:flex; gap:10px; margin-top:16px; flex-wrap:wrap}
+
+  .finding{background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--muted); border-radius:11px; padding:14px 16px; margin:10px 0 0}
+  .finding.sv-critical{border-left-color:var(--crit)} .finding.sv-high{border-left-color:var(--high)}
+  .finding.sv-medium{border-left-color:var(--med)} .finding.sv-low{border-left-color:var(--low)}
+  .finding.st-pass{border-left-color:var(--low); opacity:.78}
+  .f-top{display:flex; align-items:center; gap:9px; flex-wrap:wrap}
+  .f-top h4{font-family:var(--display); font-size:15px; font-weight:600; margin:0}
+  .f-badge{font-family:var(--mono); font-size:9px; letter-spacing:.1em; text-transform:uppercase; padding:3px 7px; border-radius:5px; border:1px solid var(--line); color:var(--muted)}
+  .f-badge.pass{color:var(--low); border-color:rgba(78,205,196,.4)}
+  .f-badge.fail{color:var(--crit); border-color:rgba(255,77,109,.4)}
+  .f-badge.warn{color:var(--high); border-color:rgba(255,159,69,.4)}
+  .f-detail{color:#cdd3e6; font-size:13.5px; margin:8px 0 0}
+  .f-fix{color:var(--muted); font-size:13px; margin:6px 0 0}
+  .f-fix b{color:var(--accent); font-weight:500; font-family:var(--mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase}
+  .section-label{font-family:var(--mono); font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--accent); margin:26px 0 4px}
+  .manual{background:var(--raised); border:1px solid var(--line); border-radius:11px; padding:12px 15px; margin:8px 0 0}
+  .manual .mt{display:flex; gap:9px; align-items:center; flex-wrap:wrap}
+  .manual h4{font-family:var(--display); font-size:14px; font-weight:600; margin:0}
+  .manual p{color:var(--muted); font-size:12.5px; margin:5px 0 0}
 </style>
 </head>
 <body>
@@ -285,6 +343,28 @@
     </div>
   </header>
 
+  <div class="tabs" role="tablist">
+    <button class="tab" id="tab-scan" role="tab" aria-selected="true" aria-controls="scanView">Scan a site</button>
+    <button class="tab" id="tab-register" role="tab" aria-selected="false" aria-controls="registerView">Threat register</button>
+  </div>
+
+  <section class="view" id="scanView" role="tabpanel" aria-labelledby="tab-scan">
+    <div class="scan-form">
+      <div class="scan-row">
+        <input id="scanUrl" type="url" placeholder="https://your-app.example.com" autocomplete="off" spellcheck="false" aria-label="URL to scan" />
+        <button class="btn" id="scanBtn">Run scan</button>
+      </div>
+      <label class="auth-ack">
+        <input type="checkbox" id="authAck" />
+        <span>I own this site or am authorized to test it. This runs passive checks only — it reads responses and sends no attack payloads.</span>
+      </label>
+      <div class="scan-note">Checks: TLS &amp; certificate · security headers · cookie flags · CORS · HTTPS enforcement · info disclosure. Private, loopback, and cloud-metadata addresses are refused.</div>
+      <div class="scan-msg" id="scanMsg"></div>
+    </div>
+    <div class="report" id="report" hidden></div>
+  </section>
+
+  <section class="view" id="registerView" role="tabpanel" aria-labelledby="tab-register" hidden>
   <section class="summary" id="summary" aria-label="Threat counts by severity"></section>
 
   <div class="controls">
@@ -313,6 +393,7 @@
   </div>
 
   <main class="list" id="list" aria-live="polite"></main>
+  </section><!-- /registerView -->
 
   <footer>
     Educational reference for hardening your own systems. Ranking reflects the OWASP Top 10:2025 order plus an indicative threat score for infra items. Deployed for study on Amazon EKS — try <code>GET /api/vulnerabilities</code>, <code>/healthz</code>, and <code>/api/burn</code>.
@@ -443,6 +524,145 @@
   wireChips("sevChips","sev");
 
   load();
+})();
+</script>
+
+<script>
+(function(){
+  function esc(s){ return String(s==null?"":s).replace(/[&<>]/g,function(m){return {"&":"&amp;","<":"&lt;",">":"&gt;"}[m];}); }
+  function $(id){ return document.getElementById(id); }
+  var lastReport = null;
+
+  // ---- tabs ----
+  var views = {scan: $("scanView"), register: $("registerView")};
+  var tabs = {scan: $("tab-scan"), register: $("tab-register")};
+  function selectTab(name){
+    Object.keys(views).forEach(function(k){
+      var on = k===name;
+      views[k].hidden = !on;
+      tabs[k].setAttribute("aria-selected", on?"true":"false");
+    });
+  }
+  tabs.scan.addEventListener("click", function(){ selectTab("scan"); });
+  tabs.register.addEventListener("click", function(){ selectTab("register"); });
+
+  // ---- scan ----
+  var msg = $("scanMsg"), report = $("report"), btn = $("scanBtn");
+  function showMsg(text, kind){ msg.textContent = text; msg.className = "scan-msg show " + (kind||""); }
+  function clearMsg(){ msg.className = "scan-msg"; }
+
+  function severityCounts(s){
+    var order = [["critical","critical"],["high","high"],["medium","medium"],["low","low"],["info","info"],["pass","passed"]];
+    return order.filter(function(o){ return s[o[0]]; }).map(function(o){ return s[o[0]]+" "+o[1]; }).join("  ·  ");
+  }
+
+  function findingHTML(f){
+    var stClass = f.status==="fail"?"fail":(f.status==="warn"?"warn":(f.status==="pass"?"pass":""));
+    return ''+
+      '<div class="finding sv-'+f.severity+' st-'+f.status+'">'+
+        '<div class="f-top">'+
+          '<span class="f-badge '+stClass+'">'+esc(f.status)+'</span>'+
+          '<span class="f-badge">'+esc(f.categoryId)+'</span>'+
+          (f.status==="pass"?'':'<span class="f-badge">'+esc(f.severity)+'</span>')+
+          '<h4>'+esc(f.title)+'</h4>'+
+        '</div>'+
+        (f.detail?'<p class="f-detail">'+esc(f.detail)+'</p>':'')+
+        (f.recommendation?'<p class="f-fix"><b>Fix</b> &nbsp;'+esc(f.recommendation)+'</p>':'')+
+      '</div>';
+  }
+
+  function renderReport(r){
+    lastReport = r;
+    var host = "";
+    try { host = new URL(r.finalUrl||r.target).host; } catch(e){ host = r.target; }
+    var issues = r.findings.filter(function(f){ return f.status!=="pass"; });
+    var passes = r.findings.filter(function(f){ return f.status==="pass"; });
+
+    var html = ''+
+      '<div class="grade-card">'+
+        '<div class="grade-ring grade-'+r.grade+'">'+r.grade+'<span class="s">'+r.score+'</span></div>'+
+        '<div class="grade-meta">'+
+          '<div class="url">'+esc(r.finalUrl||r.target)+'</div>'+
+          '<div class="sub">Score '+r.score+'/100  ·  '+severityCounts(r.summary)+'</div>'+
+          '<div class="sub">'+(r.meta.tlsProtocol?('TLS '+esc(r.meta.tlsProtocol)+(r.meta.certDaysLeft!=null?' · cert '+r.meta.certDaysLeft+'d':'')+' · '):'')+'HTTPS '+(r.meta.httpsEnforced?'enforced':'not enforced')+' · scanned '+new Date(r.scannedAt).toLocaleString()+'</div>'+
+          '<div class="dl-row">'+
+            '<button class="btn ghost" id="dlMd">Download .md</button>'+
+            '<button class="btn ghost" id="dlJson">Download .json</button>'+
+          '</div>'+
+        '</div>'+
+      '</div>';
+
+    if(issues.length){ html += '<div class="section-label">Findings · '+issues.length+'</div>'; html += issues.map(findingHTML).join(""); }
+    if(passes.length){ html += '<div class="section-label">Passed checks · '+passes.length+'</div>'; html += passes.map(findingHTML).join(""); }
+    html += '<div class="section-label">Not auto-checked · needs authorized active testing or review</div>';
+    html += r.notObserved.map(function(m){
+      return '<div class="manual"><div class="mt"><span class="f-badge">'+esc(m.id)+'</span><h4>'+esc(m.title)+'</h4></div><p>'+esc(m.reason)+'</p></div>';
+    }).join("");
+
+    report.innerHTML = html;
+    report.hidden = false;
+    $("dlMd").addEventListener("click", function(){ download(toMarkdown(r), "threat-report-"+host+".md", "text/markdown"); });
+    $("dlJson").addEventListener("click", function(){ download(JSON.stringify(r,null,2), "threat-report-"+host+".json", "application/json"); });
+  }
+
+  function toMarkdown(r){
+    var L = [];
+    L.push("# Security Posture Report");
+    L.push("");
+    L.push("- **Target:** "+r.target);
+    L.push("- **Final URL:** "+(r.finalUrl||r.target));
+    L.push("- **Scanned:** "+r.scannedAt);
+    L.push("- **Grade:** "+r.grade+"  (score "+r.score+"/100)");
+    if(r.meta.tlsProtocol) L.push("- **TLS:** "+r.meta.tlsProtocol+(r.meta.certDaysLeft!=null?" (cert valid "+r.meta.certDaysLeft+" more days)":""));
+    L.push("- **HTTPS enforced:** "+(r.meta.httpsEnforced?"yes":"no"));
+    L.push("");
+    L.push("> Passive scan only — no attack payloads were sent. Categories that need active testing or review are listed at the end.");
+    L.push("");
+    L.push("## Summary");
+    ["critical","high","medium","low","info","pass"].forEach(function(k){ if(r.summary[k]) L.push("- "+k+": "+r.summary[k]); });
+    L.push("");
+    L.push("## Findings");
+    r.findings.filter(function(f){return f.status!=="pass";}).forEach(function(f){
+      L.push("### "+f.title+"  _["+f.status+" · "+f.severity+" · "+f.categoryId+"]_");
+      if(f.detail) L.push(f.detail);
+      if(f.recommendation) L.push("**Fix:** "+f.recommendation);
+      L.push("");
+    });
+    var passed = r.findings.filter(function(f){return f.status==="pass";});
+    if(passed.length){ L.push("## Passed checks"); passed.forEach(function(f){ L.push("- "+f.title+" ("+f.categoryId+")"); }); L.push(""); }
+    L.push("## Not auto-checked (manual / active testing required)");
+    r.notObserved.forEach(function(m){ L.push("- **"+m.id+" "+m.title+"** — "+m.reason); });
+    L.push("");
+    return L.join("\n");
+  }
+
+  function download(text, filename, mime){
+    var blob = new Blob([text], {type: mime});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = filename; document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+  }
+
+  function runScan(){
+    var url = ($("scanUrl").value||"").trim();
+    if(!url){ showMsg("Enter a URL to scan.","err"); return; }
+    if(!/^https?:\/\//i.test(url)){ url = "https://"+url; $("scanUrl").value = url; }
+    if(!$("authAck").checked){ showMsg("Confirm you're authorized to test this target before scanning.","err"); return; }
+    report.hidden = true; btn.disabled = true;
+    showMsg("Scanning "+url+" … reading headers, TLS, cookies and CORS.","busy");
+    fetch("/api/scan", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({url:url})})
+      .then(function(res){ return res.json().then(function(j){ return {ok:res.ok, j:j}; }); })
+      .then(function(o){
+        btn.disabled = false;
+        if(!o.ok || o.j.error){ showMsg(o.j.message || "Scan failed.","err"); return; }
+        clearMsg(); renderReport(o.j);
+      })
+      .catch(function(){ btn.disabled = false; showMsg("Could not reach the scanner. If you're viewing this preview without the backend, deploy the app and try from there.","err"); });
+  }
+
+  btn.addEventListener("click", runScan);
+  $("scanUrl").addEventListener("keydown", function(e){ if(e.key==="Enter") runScan(); });
 })();
 </script>
 </body>

@@ -62,9 +62,38 @@ threat-index/
     └── 07-rbac.yaml        # least-privilege SA + Role + RoleBinding
 ```
 
-Endpoints: `/` (UI), `/api/vulnerabilities`, `/api/config`, `/api/burn?ms=2000`, `/healthz`, `/readyz`.
+Endpoints: `/` (UI), `/api/vulnerabilities`, `/api/scan` (POST), `/api/config`, `/api/burn?ms=2000`, `/healthz`, `/readyz`.
 
 ---
+
+## 2a. The site scanner (`Scan a site` tab)
+
+Enter a URL, confirm you're authorized to test it, and the backend runs **passive,
+non-intrusive** checks, then returns a graded report (A–F + score /100) you can read
+inline or download as Markdown / JSON.
+
+What it observes (read-only, no payloads): TLS version + certificate expiry, HTTPS
+enforcement, security headers (HSTS, CSP, X-Content-Type-Options, clickjacking,
+Referrer-Policy, Permissions-Policy), cookie flags (Secure / HttpOnly / SameSite),
+permissive CORS, and server/tech disclosure — mapped to the OWASP 2025 categories.
+
+What it deliberately does **not** do: send injection/XSS payloads, fuzz parameters, or
+attempt auth bypass. Those (A01 access control, A05 injection, A07 auth logic, A03 supply
+chain, and the infra items) can't be judged safely from outside, so the report lists them
+under *"not auto-checked — needs authorized active testing or review"* with the reason for each.
+
+Built-in **SSRF guard:** the target hostname is resolved and every IP is checked against
+private / loopback / link-local / cloud-metadata ranges (incl. `169.254.169.254`) before any
+connection and on every redirect hop. So the scanner can't be turned inward against your
+cluster or the EC2 metadata service — that guard is the A01 lesson, live.
+
+Try it after deploying:
+```bash
+kubectl -n threat-index port-forward svc/threat-index 8080:80 &
+curl -s -X POST localhost:8080/api/scan -H 'Content-Type: application/json' \
+  -d '{"url":"https://example.com"}' | head
+# or just open http://localhost:8080 and use the Scan tab
+```
 
 ## 3. Run it locally first
 

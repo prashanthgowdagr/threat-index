@@ -8,6 +8,7 @@ WORKDIR /app
 COPY package.json ./
 # If you add dependencies later: COPY package-lock.json ./ && npm ci --omit=dev
 COPY server.js ./
+COPY scanner.js ./
 COPY public ./public
 
 # ---- runtime stage: distroless, non-root, minimal attack surface ----
