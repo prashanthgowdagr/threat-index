@@ -1,0 +1,13 @@
+{
+  "name": "threat-index",
+  "version": "1.0.0",
+  "description": "Web application vulnerability register (OWASP Top 10:2025 + cloud/K8s/network), ranked by threat level. EKS study app.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT"
+}

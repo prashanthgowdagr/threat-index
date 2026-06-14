@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: threat-index
+  namespace: threat-index
+  annotations:
+    # Requires the AWS Load Balancer Controller installed in the cluster.
+    # (If you instead run an NGINX ingress controller, set ingressClassName: nginx
+    #  and drop the alb.* annotations below.)
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/healthcheck-path: /healthz
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
+spec:
+  ingressClassName: alb
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: threat-index
+                port:
+                  number: 80

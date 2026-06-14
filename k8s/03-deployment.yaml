@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: threat-index
+  namespace: threat-index
+  labels:
+    app: threat-index
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: threat-index
+  template:
+    metadata:
+      labels:
+        app: threat-index
+    spec:
+      serviceAccountName: threat-index-sa          # least-privilege SA (see 07-rbac.yaml)
+      automountServiceAccountToken: false          # this app doesn't call the K8s API
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: threat-index
+          # Replace with your ECR image, e.g.:
+          #   <ACCOUNT_ID>.dkr.ecr.ap-south-1.amazonaws.com/threat-index:v1
+          image: REPLACE_WITH_YOUR_ECR_IMAGE:v1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: threat-index-config
+          env:
+            - name: API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: threat-index-secret
+                  key: API_KEY
+          resources:
+            requests:
+              cpu: "100m"      # HPA scales against this request
+              memory: "64Mi"
+            limits:
+              cpu: "300m"
+              memory: "128Mi"
+          livenessProbe:
+            httpGet: { path: /healthz, port: 8080 }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet: { path: /readyz, port: 8080 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]

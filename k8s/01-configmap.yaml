@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: threat-index-config
+  namespace: threat-index
+data:
+  # Non-secret configuration. Surfaced at GET /api/config so you can verify the wiring.
+  APP_ENVIRONMENT: "eks-study"
+  FEATURE_BANNER: "Running on prashanth-pgr (ap-south-1)"

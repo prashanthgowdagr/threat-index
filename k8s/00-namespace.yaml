@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: threat-index
+  labels:
+    app.kubernetes.io/part-of: threat-index
+    # Enforce the hardened Pod Security Standard at admission (A02 / containers-as-root).
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/warn: restricted

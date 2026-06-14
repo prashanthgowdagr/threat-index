@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Threat Index — Web Application Vulnerability Register</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+
+<!-- Canonical dataset. The server reads THIS block and serves it at /api/vulnerabilities,
+     so the page and the API share a single source of truth (think __NEXT_DATA__). -->
+<script id="vuln-data" type="application/json">
+[
+  {"id":"A01","rank":1,"title":"Broken Access Control","domain":"app","severity":"critical","score":9.3,
+   "summary":"Users act outside their intended permissions — reading or changing data they shouldn't, escalating to admin, or reaching internal endpoints.",
+   "exploit":"An attacker tampers with an ID in a URL or API parameter (IDOR), replays a privileged request, or forces the server to fetch an internal address (SSRF, now folded into this category) to reach metadata or admin services.",
+   "fixes":["Deny by default; grant access explicitly per role and per record","Enforce authorization server-side on every request, never in the UI alone","Use opaque, unguessable references and verify ownership before returning data","Validate and allow-list any server-side outbound requests to block SSRF"],
+   "hardening":["Centralize access checks in one tested module rather than scattering them","Log access-control failures and alert on spikes","Add automated tests that assert a low-privilege user is refused privileged actions"],
+   "infra":"In EKS this maps directly to Kubernetes RBAC: scope ServiceAccounts to least privilege, avoid cluster-admin bindings, and lock down the IMDS endpoint (169.254.169.254) so a pod can't pull node IAM credentials via SSRF.",
+   "cwe":["CWE-862 Missing Authorization","CWE-639 IDOR","CWE-918 SSRF"]},
+
+  {"id":"A02","rank":2,"title":"Security Misconfiguration","domain":"cloud","severity":"critical","score":8.7,
+   "summary":"Insecure defaults, incomplete hardening, verbose errors, open ports, or unnecessary features left enabled across the stack.",
+   "exploit":"Attackers scan for default credentials, exposed admin consoles, directory listings, or debug endpoints, then walk straight in or harvest stack traces that reveal internals.",
+   "fixes":["Harden from a documented baseline; disable defaults, samples, and unused features","Return generic error messages to clients; keep stack traces in logs only","Set secure HTTP headers (HSTS, CSP, X-Content-Type-Options, frame-ancestors)","Automate configuration so every environment is built identically"],
+   "hardening":["Run a config/benchmark scanner (CIS) in CI and fail builds on drift","Use minimal base images and remove shells/package managers in production","Review cloud service settings — public flags, logging, encryption — on a schedule"],
+   "infra":"The #1 cloud breach driver. On EKS: avoid privileged pods, set readOnlyRootFilesystem, restrict the control-plane endpoint, and scan manifests with kubescape/kube-bench against CIS benchmarks.",
+   "cwe":["CWE-16 Configuration","CWE-1188 Insecure Default"]},
+
+  {"id":"A03","rank":3,"title":"Software Supply Chain Failures","domain":"cloud","severity":"critical","score":8.9,
+   "summary":"Risk introduced through third-party libraries, build tools, package registries, and CI/CD pipelines — not just known-vulnerable dependencies.",
+   "exploit":"A poisoned npm/PyPI package, a dependency-confusion typosquat, or a compromised build step injects malicious code that ships with your release (think SolarWinds, Log4Shell).",
+   "fixes":["Pin exact versions and verify integrity with lockfiles, hashes, and signatures","Pull only from trusted, scoped registries; block public fallback for internal names","Generate and keep an SBOM for every build","Lock down CI/CD: scoped tokens, isolated runners, no secret echo in logs"],
+   "hardening":["Scan dependencies continuously and alert on new advisories","Verify artifact provenance (e.g. Sigstore/SLSA) before deploy","Review and minimize the blast radius of build credentials"],
+   "infra":"On EKS: sign and verify container images (cosign), enforce signature checks with an admission controller, and scan images (Trivy/Grype) in the pipeline and at admission.",
+   "cwe":["CWE-1357 Reliance on Insufficiently Trustworthy Component","CWE-829 Inclusion from Untrusted Source"]},
+
+  {"id":"A04","rank":4,"title":"Cryptographic Failures","domain":"app","severity":"high","score":8.1,
+   "summary":"Sensitive data is exposed because encryption is missing, weak, or misapplied — in transit or at rest.",
+   "exploit":"An attacker sniffs plaintext traffic, cracks a weak hash or cipher, or finds secrets and PII stored unencrypted in a database or backup.",
+   "fixes":["Encrypt all sensitive data in transit (TLS 1.2+) and at rest","Hash passwords with a slow, salted algorithm (argon2id, bcrypt, scrypt)","Use strong, current algorithms; drop MD5, SHA-1, DES, and ECB mode","Never hardcode keys; manage them in a dedicated key store with rotation"],
+   "hardening":["Classify data and minimize what you store in the first place","Disable caching of responses containing sensitive data","Enforce forward secrecy and modern cipher suites at the edge"],
+   "infra":"On EKS/AWS: enable EBS and S3 encryption with KMS, turn on EKS secrets envelope encryption (KMS) so etcd isn't holding plaintext, and terminate TLS at the Ingress/ALB.",
+   "cwe":["CWE-327 Broken Crypto","CWE-319 Cleartext Transmission"]},
+
+  {"id":"A05","rank":5,"title":"Injection","domain":"app","severity":"high","score":8.4,
+   "summary":"Untrusted input is interpreted as a command or query — SQL, NoSQL, OS command, LDAP, and cross-site scripting (XSS).",
+   "exploit":"An attacker submits crafted input that breaks out of a query or template, e.g. ' OR 1=1 -- for SQL or a script payload that runs in another user's browser.",
+   "fixes":["Use parameterized queries / prepared statements everywhere — never string concatenation","Validate and allow-list input; reject by default","Escape output for the correct context (HTML, attribute, JS, URL) to stop XSS","Avoid shelling out; use safe APIs instead of OS command strings"],
+   "hardening":["Apply a strict Content-Security-Policy to blunt XSS impact","Use an ORM/query builder that parameterizes by design","Run SAST/DAST in CI to catch injection sinks early"],
+   "infra":"At the edge, a WAF (AWS WAF on the ALB Ingress) adds a coarse net — but it's defense-in-depth, not a substitute for fixing the code.",
+   "cwe":["CWE-89 SQLi","CWE-79 XSS","CWE-78 OS Command Injection"]},
+
+  {"id":"A06","rank":6,"title":"Insecure Design","domain":"app","severity":"high","score":7.6,
+   "summary":"Flaws baked into the architecture itself — missing or weak controls that no amount of clean coding can patch after the fact.",
+   "exploit":"An attacker abuses missing rate limits, a flawed password-reset flow, or business logic that never anticipated abuse (e.g. ordering negative quantities).",
+   "fixes":["Threat-model features before building them; ask how each can be abused","Establish secure design patterns and a reusable, paved-road component library","Enforce business-logic limits (rate limits, quotas, anti-automation)","Segment tiers so one compromised component can't reach everything"],
+   "hardening":["Write abuse-case tests alongside feature tests","Run design reviews for high-risk flows (auth, payments, data export)","Use defense-in-depth so no single control is the only line"],
+   "infra":"Architecture choices show up in the cluster too: namespace isolation, network segmentation, and separate node groups for sensitive workloads are design-time decisions.",
+   "cwe":["CWE-657 Violation of Secure Design Principles","CWE-1173 Improper Input Validation Strategy"]},
+
+  {"id":"A07","rank":7,"title":"Authentication Failures","domain":"app","severity":"high","score":7.9,
+   "summary":"Weaknesses in confirming identity — credential stuffing, weak passwords, broken session handling, and missing MFA.",
+   "exploit":"Attackers replay leaked passwords (credential stuffing), brute-force weak logins, or hijack predictable or non-expiring session tokens.",
+   "fixes":["Offer and encourage MFA; require it for sensitive roles","Block known-breached and weak passwords; allow long passphrases","Rate-limit and progressively delay failed logins","Issue high-entropy session tokens, rotate on login, and expire on logout"],
+   "hardening":["Bind sessions to context and invalidate server-side on sign-out","Avoid credentials in URLs; use secure, HttpOnly, SameSite cookies","Monitor for credential-stuffing patterns and alert"],
+   "infra":"For cluster and cloud access, prefer short-lived federated credentials (IRSA, OIDC) over long-lived keys, and require MFA on the AWS console and IAM users.",
+   "cwe":["CWE-287 Improper Authentication","CWE-384 Session Fixation"]},
+
+  {"id":"A08","rank":8,"title":"Software or Data Integrity Failures","domain":"app","severity":"high","score":7.4,
+   "summary":"Code or data is trusted without verifying it hasn't been tampered with — unsigned updates, insecure deserialization, untrusted CI/CD.",
+   "exploit":"An attacker swaps an auto-update payload, feeds a crafted serialized object that executes on load, or slips malicious code through an unverified pipeline stage.",
+   "fixes":["Verify digital signatures on updates, packages, and artifacts before use","Never deserialize untrusted data; use safe formats and strict schemas","Protect the integrity of CI/CD: signed commits, locked runners, reviewed changes","Validate the integrity of data crossing trust boundaries"],
+   "hardening":["Adopt SLSA-style provenance and reproducible builds","Use Subresource Integrity (SRI) for third-party browser scripts","Separate and protect deploy credentials from build code"],
+   "infra":"Enforce image signature verification at admission so only artifacts your pipeline signed can run on the cluster.",
+   "cwe":["CWE-502 Deserialization of Untrusted Data","CWE-345 Insufficient Verification of Data Authenticity"]},
+
+  {"id":"A09","rank":9,"title":"Security Logging and Alerting Failures","domain":"cloud","severity":"medium","score":6.5,
+   "summary":"Without enough logging, detection, and alerting, breaches go unnoticed and incident response is blind.",
+   "exploit":"An attacker operates for weeks because failed logins, privilege changes, and data exports were never logged or never triggered an alert.",
+   "fixes":["Log auth events, access-control failures, and high-value actions with context","Centralize logs in tamper-resistant storage with retention","Alert on suspicious patterns in near-real-time, not after the fact","Ensure logs carry enough detail for forensics without leaking secrets"],
+   "hardening":["Test the alerting path with regular fire drills","Monitor for log gaps — silence can mean tampering","Correlate app, cloud, and network logs in one place"],
+   "infra":"On EKS/AWS: enable control-plane audit logs to CloudWatch, turn on CloudTrail and GuardDuty (incl. EKS protection), and ship pod logs to a central store.",
+   "cwe":["CWE-778 Insufficient Logging","CWE-223 Omission of Security-relevant Information"]},
+
+  {"id":"A10","rank":10,"title":"Mishandling of Exceptional Conditions","domain":"app","severity":"medium","score":6.0,
+   "summary":"New in 2025: poor error handling and unsafe failure states — unhandled exceptions, fail-open logic, and inconsistent behavior under stress.",
+   "exploit":"An attacker forces an error path that fails open (granting access on exception), leaks internals in a stack trace, or crashes the service into an unpredictable state.",
+   "fixes":["Fail closed: an error must deny, never grant, access","Handle exceptions explicitly; never swallow or blanket-catch silently","Keep error detail server-side; show users a generic, safe message","Validate inputs and resource limits to avoid predictable crash paths"],
+   "hardening":["Test failure and edge cases as first-class scenarios","Apply timeouts, retries with backoff, and circuit breakers deliberately","Ensure degraded modes are safe and well-defined"],
+   "infra":"In Kubernetes, define resource requests/limits and liveness/readiness probes so a struggling pod is restarted or removed from rotation instead of failing in place.",
+   "cwe":["CWE-755 Improper Handling of Exceptional Conditions","CWE-703 Improper Check of Conditions"]},
+
+  {"id":"K8s","rank":null,"title":"Exposed Kubernetes API / kubelet","domain":"network","severity":"critical","score":9.0,
+   "summary":"The cluster control plane, dashboard, or kubelet read/write ports are reachable from the internet or an over-broad network.",
+   "exploit":"An attacker reaching an open API server, anonymous-auth kubelet (10250), or unauthenticated dashboard can list secrets, exec into pods, and take over the cluster.",
+   "fixes":["Make the API server endpoint private or restrict public access by CIDR","Disable anonymous auth on the kubelet and require authn/authz","Never expose the Kubernetes Dashboard publicly; gate it behind auth + VPN","Remove any LoadBalancer/NodePort that fronts control-plane components"],
+   "hardening":["Use security groups / endpoint access controls to allow-list admin CIDRs","Rotate cluster certificates and audit who can reach the API","Enable audit logging on the control plane"],
+   "infra":"EKS-specific: set cluster endpoint access to Private or Public+CIDR-restricted in ap-south-1, and confirm node security groups don't expose 10250 broadly.",
+   "cwe":["CWE-284 Improper Access Control","CWE-306 Missing Authentication"]},
+
+  {"id":"IAM","rank":null,"title":"Over-permissive IAM / IRSA","domain":"cloud","severity":"critical","score":8.8,
+   "summary":"Roles and policies grant far more than needed — wildcards, admin attachments, or broadly trusted ServiceAccounts.",
+   "exploit":"A compromised pod or workload with an over-broad role pivots across the account — reading every bucket, creating users, or escalating to admin.",
+   "fixes":["Apply least privilege: scope actions and resources, no Action:* / Resource:*","Use IRSA / Pod Identity to give each workload its own narrow role","Remove unused roles, keys, and broad managed-policy attachments","Add condition keys (source VPC, tags) to constrain where credentials work"],
+   "hardening":["Run IAM Access Analyzer and review findings regularly","Prefer short-lived federated credentials over static access keys","Separate duties so no single role both deploys and reads all data"],
+   "infra":"On EKS: bind each app's ServiceAccount to a dedicated IAM role via IRSA rather than relying on the node instance role, which every pod on the node would otherwise share.",
+   "cwe":["CWE-269 Improper Privilege Management","CWE-732 Incorrect Permission Assignment"]},
+
+  {"id":"OBJ","rank":null,"title":"Publicly Exposed Storage","domain":"cloud","severity":"high","score":8.5,
+   "summary":"Object stores, databases, or snapshots are world-readable or reachable without authentication.",
+   "exploit":"An attacker enumerates a public S3 bucket or open database and exfiltrates data outright — no exploit code required.",
+   "fixes":["Enable account-level public-access blocks on object storage","Default buckets/databases to private; grant access by explicit policy","Encrypt at rest and require TLS for access","Audit snapshot and backup sharing settings"],
+   "hardening":["Continuously scan for public resources and alert on new ones","Use VPC endpoints / private networking for data services","Apply object-level logging to detect anomalous access"],
+   "infra":"For EKS persistent storage, keep EBS/EFS volumes private to the VPC, encrypt with KMS, and never back workloads with a publicly exposed data service.",
+   "cwe":["CWE-200 Exposure of Sensitive Information","CWE-732 Incorrect Permission Assignment"]},
+
+  {"id":"NET","rank":null,"title":"Missing Network Policies","domain":"network","severity":"high","score":7.7,
+   "summary":"A flat pod network lets every pod talk to every other pod, so one compromise spreads laterally with no friction.",
+   "exploit":"After popping one pod, an attacker scans the cluster network freely and reaches databases and internal services that should have been unreachable.",
+   "fixes":["Adopt default-deny NetworkPolicies and explicitly allow required flows","Segment by namespace and label; isolate sensitive workloads","Restrict egress so pods can't phone home to arbitrary destinations","Pair with security-group-per-pod where the CNI supports it"],
+   "hardening":["Visualize and review actual traffic before tightening","Test policies in staging to avoid breaking legitimate paths","Monitor denied connections for both attacks and misconfig"],
+   "infra":"The VPC CNI on EKS supports NetworkPolicy enforcement — start default-deny per namespace, then allow only the flows your app needs.",
+   "cwe":["CWE-923 Improper Restriction of Communication Channel","CWE-668 Exposure of Resource to Wrong Sphere"]},
+
+  {"id":"ROOT","rank":null,"title":"Containers Running as Root","domain":"network","severity":"high","score":7.5,
+   "summary":"Pods run privileged or as UID 0 with a writable root filesystem and no dropped capabilities, widening the blast radius of any code-exec bug.",
+   "exploit":"An attacker who gets code execution in a root container can tamper with the host, mount sensitive paths, or break toward the node.",
+   "fixes":["Set runAsNonRoot and a non-zero runAsUser in the securityContext","Set readOnlyRootFilesystem: true and drop all Linux capabilities","Never set privileged: true or allowPrivilegeEscalation: true","Avoid hostPath, hostNetwork, and hostPID unless truly required"],
+   "hardening":["Enforce Pod Security Standards (restricted) via admission","Use a policy engine (Kyverno/OPA) to reject non-compliant pods","Build images that run cleanly as an unprivileged user"],
+   "infra":"This register's own Deployment manifest demonstrates a hardened securityContext you can copy as a baseline.",
+   "cwe":["CWE-250 Execution with Unnecessary Privileges","CWE-269 Improper Privilege Management"]},
+
+  {"id":"SG","rank":null,"title":"Unrestricted Security Groups / 0.0.0.0/0","domain":"network","severity":"high","score":8.0,
+   "summary":"Security groups, firewalls, or NACLs allow ingress from the entire internet to ports that should be internal.",
+   "exploit":"An attacker discovers an open admin, database, or SSH port via internet-wide scanning and attacks it directly.",
+   "fixes":["Allow ingress only from specific CIDRs/security groups, never 0.0.0.0/0 for admin ports","Close database, SSH, and management ports to the public internet","Front public traffic through a load balancer / WAF, not direct instance exposure","Review and prune rules regularly"],
+   "hardening":["Use a bastion or SSM Session Manager instead of open SSH","Tag and audit every broad rule with a justification","Alert on creation of any 0.0.0.0/0 rule"],
+   "infra":"Check node and ALB security groups in ap-south-1: only the load balancer should accept public 80/443, and nodes should accept traffic only from the cluster and the LB.",
+   "cwe":["CWE-284 Improper Access Control","CWE-1327 Binding to Unrestricted IP Address"]},
+
+  {"id":"SEC","rank":null,"title":"Unencrypted / Hardcoded Secrets","domain":"cloud","severity":"high","score":8.2,
+   "summary":"Secrets live in plaintext — in code, images, environment defaults, or unencrypted cluster storage.",
+   "exploit":"An attacker reads credentials from a Git history, a baked-in image layer, or etcd, then reuses them to access databases and APIs.",
+   "fixes":["Never commit secrets; scan repos and image layers for leaked credentials","Store secrets in a managed vault (AWS Secrets Manager / SSM Parameter Store)","Encrypt Kubernetes Secrets at rest with a KMS key (envelope encryption)","Rotate credentials regularly and on any suspected exposure"],
+   "hardening":["Inject secrets at runtime; keep them out of images and logs","Limit which ServiceAccounts can read which Secrets via RBAC","Use the Secrets Store CSI driver to sync from a managed vault"],
+   "infra":"This study kit shows a base64 Kubernetes Secret for learning — but the README explains why production should layer KMS encryption and an external vault on top.",
+   "cwe":["CWE-798 Use of Hard-coded Credentials","CWE-312 Cleartext Storage of Sensitive Information"]}
+]
+</script>
+
+<style>
+  :root{
+    --ink:#0E1322; --panel:#171D30; --raised:#1E2640; --line:#2A3350;
+    --text:#E9ECF6; --muted:#8B93AD; --accent:#7C84FF;
+    --crit:#FF4D6D; --high:#FF9F45; --med:#EBC94A; --low:#4ECDC4;
+    --mono:'JetBrains Mono',ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace;
+    --sans:'Inter',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    --display:'Space Grotesk','Inter',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--ink); color:var(--text); font-family:var(--sans);
+    line-height:1.55; -webkit-font-smoothing:antialiased;
+    background-image:radial-gradient(900px 500px at 80% -10%, rgba(124,132,255,.10), transparent 60%);
+  }
+  .wrap{max-width:1040px; margin:0 auto; padding:0 20px}
+
+  /* ---------- header ---------- */
+  header{padding:40px 0 22px; border-bottom:1px solid var(--line)}
+  .eyebrow{font-family:var(--mono); font-size:11px; letter-spacing:.32em; text-transform:uppercase; color:var(--accent); margin:0 0 10px}
+  h1{font-family:var(--display); font-weight:700; font-size:clamp(30px,6vw,52px); line-height:1.02; margin:0; letter-spacing:-.015em}
+  h1 .dim{color:var(--muted); font-weight:500}
+  .lede{color:var(--muted); max-width:60ch; margin:14px 0 0; font-size:15px}
+  .meta-row{display:flex; flex-wrap:wrap; gap:10px 22px; align-items:center; margin-top:22px}
+  .api-badge{font-family:var(--mono); font-size:11.5px; letter-spacing:.06em; color:var(--muted); display:inline-flex; align-items:center; gap:7px}
+  .dot{width:8px; height:8px; border-radius:50%; background:var(--muted); box-shadow:0 0 0 0 rgba(0,0,0,0)}
+  .api-badge.live .dot{background:var(--low); animation:pulse 2.2s infinite}
+  .api-badge.offline .dot{background:var(--high)}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(78,205,196,.45)}70%{box-shadow:0 0 0 7px rgba(78,205,196,0)}100%{box-shadow:0 0 0 0 rgba(78,205,196,0)}}
+  .src{font-family:var(--mono); font-size:11px; color:var(--muted); letter-spacing:.04em}
+
+  /* ---------- summary chips ---------- */
+  .summary{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:24px 0 6px}
+  .stat{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 16px; position:relative; overflow:hidden; opacity:0; transform:translateY(8px); animation:rise .5s ease forwards}
+  .stat:nth-child(1){animation-delay:.04s}.stat:nth-child(2){animation-delay:.10s}.stat:nth-child(3){animation-delay:.16s}.stat:nth-child(4){animation-delay:.22s}
+  @keyframes rise{to{opacity:1; transform:none}}
+  .stat .n{font-family:var(--mono); font-size:30px; font-weight:700; line-height:1}
+  .stat .l{font-family:var(--mono); font-size:10.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); margin-top:6px}
+  .stat::before{content:""; position:absolute; left:0; top:0; bottom:0; width:3px}
+  .stat.crit::before{background:var(--crit)} .stat.crit .n{color:var(--crit)}
+  .stat.high::before{background:var(--high)} .stat.high .n{color:var(--high)}
+  .stat.med::before{background:var(--med)} .stat.med .n{color:var(--med)}
+  .stat.low::before{background:var(--low)} .stat.low .n{color:var(--low)}
+
+  /* ---------- controls ---------- */
+  .controls{display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin:26px 0 8px}
+  .search{flex:1; min-width:200px; position:relative}
+  .search input{width:100%; background:var(--panel); border:1px solid var(--line); color:var(--text); font-family:var(--sans); font-size:14px; padding:11px 13px 11px 36px; border-radius:10px; outline:none}
+  .search input:focus{border-color:var(--accent)}
+  .search svg{position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--muted)}
+  select{background:var(--panel); border:1px solid var(--line); color:var(--text); font-family:var(--mono); font-size:12.5px; padding:10px 12px; border-radius:10px; outline:none; cursor:pointer}
+  select:focus{border-color:var(--accent)}
+  .chips{display:flex; flex-wrap:wrap; gap:8px; margin:6px 0 0}
+  .chip{font-family:var(--mono); font-size:11.5px; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); background:transparent; border:1px solid var(--line); padding:7px 12px; border-radius:999px; cursor:pointer; transition:.15s}
+  .chip:hover{color:var(--text); border-color:var(--accent)}
+  .chip[aria-pressed="true"]{color:var(--ink); background:var(--accent); border-color:var(--accent); font-weight:600}
+
+  /* ---------- list / threat spine ---------- */
+  .list{position:relative; margin:18px 0 60px; padding-left:30px}
+  .list::before{content:""; position:absolute; left:9px; top:6px; bottom:6px; width:2px;
+    background:linear-gradient(var(--crit), var(--high) 38%, var(--med) 64%, var(--low));
+    border-radius:2px; opacity:.55}
+  .card{position:relative; background:var(--panel); border:1px solid var(--line); border-radius:14px; margin:0 0 12px; transition:border-color .15s, transform .15s}
+  .card:hover{border-color:#37406a; transform:translateY(-1px)}
+  .card::before{content:""; position:absolute; left:-25px; top:24px; width:13px; height:13px; border-radius:50%; background:var(--ink); border:3px solid var(--muted)}
+  .card.sev-critical::before{border-color:var(--crit)}
+  .card.sev-high::before{border-color:var(--high)}
+  .card.sev-medium::before{border-color:var(--med)}
+  .card.sev-low::before{border-color:var(--low)}
+  .head{display:grid; grid-template-columns:auto 1fr auto; gap:16px; align-items:center; width:100%; text-align:left; background:none; border:0; color:inherit; cursor:pointer; padding:18px 18px; font:inherit}
+  .head:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:14px}
+  .rank{font-family:var(--mono); font-weight:700; font-size:26px; min-width:34px; color:var(--muted); line-height:1}
+  .card.sev-critical .rank{color:var(--crit)} .card.sev-high .rank{color:var(--high)}
+  .card.sev-medium .rank{color:var(--med)} .card.sev-low .rank{color:var(--low)}
+  .htitle{display:flex; flex-direction:column; gap:5px; min-width:0}
+  .tline{display:flex; align-items:center; gap:9px; flex-wrap:wrap}
+  .tline h3{font-family:var(--display); font-weight:600; font-size:17px; margin:0; letter-spacing:-.01em}
+  .tag{font-family:var(--mono); font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; padding:3px 7px; border-radius:5px; border:1px solid var(--line); color:var(--muted)}
+  .tag.id{color:var(--accent); border-color:rgba(124,132,255,.4)}
+  .tag.dom-app{color:#9aa2ff} .tag.dom-cloud{color:#56c7d6} .tag.dom-network{color:#c79af0}
+  .sum{color:var(--muted); font-size:13.5px; margin:0; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
+  .rt{display:flex; flex-direction:column; align-items:flex-end; gap:6px}
+  .sev{font-family:var(--mono); font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; padding:4px 9px; border-radius:999px}
+  .sev-critical .sev{color:var(--crit); background:rgba(255,77,109,.12)}
+  .sev-high .sev{color:var(--high); background:rgba(255,159,69,.12)}
+  .sev-medium .sev{color:var(--med); background:rgba(235,201,74,.12)}
+  .sev-low .sev{color:var(--low); background:rgba(78,205,196,.12)}
+  .score{font-family:var(--mono); font-size:13px; font-weight:500; color:var(--text)}
+  .score small{color:var(--muted); font-weight:400}
+  .chev{transition:transform .25s; color:var(--muted); flex-shrink:0}
+  .card.open .chev{transform:rotate(180deg)}
+
+  /* ---------- expandable body ---------- */
+  .body{max-height:0; overflow:hidden; transition:max-height .32s ease}
+  .body-inner{padding:2px 18px 20px 18px; border-top:1px solid var(--line); margin-top:-2px}
+  .block{margin:16px 0 0}
+  .block h4{font-family:var(--mono); font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); margin:0 0 7px}
+  .block p{margin:0; font-size:14px; color:#cdd3e6}
+  .block ul{margin:0; padding-left:18px}
+  .block li{font-size:14px; color:#cdd3e6; margin:5px 0}
+  .infra{background:var(--raised); border:1px solid var(--line); border-left:3px solid var(--accent); border-radius:10px; padding:12px 14px; margin-top:16px}
+  .infra h4{color:var(--accent)}
+  .infra p{color:#d7dcee; font-size:13.5px}
+  .cwe{display:flex; flex-wrap:wrap; gap:6px; margin-top:14px}
+  .cwe span{font-family:var(--mono); font-size:10.5px; color:var(--muted); border:1px solid var(--line); padding:4px 8px; border-radius:6px}
+
+  .empty{text-align:center; color:var(--muted); font-family:var(--mono); font-size:13px; padding:50px 0}
+  footer{border-top:1px solid var(--line); padding:24px 0 50px; color:var(--muted); font-size:12.5px}
+  footer code{font-family:var(--mono); color:#cdd3e6; background:var(--panel); padding:2px 6px; border-radius:5px; border:1px solid var(--line)}
+
+  @media (max-width:620px){
+    .summary{grid-template-columns:repeat(2,1fr)}
+    .head{grid-template-columns:auto 1fr; gap:12px; padding:15px}
+    .rt{grid-column:1 / -1; flex-direction:row; align-items:center; justify-content:space-between; margin-top:2px}
+    .chev{position:absolute; top:16px; right:14px}
+    .rank{font-size:22px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none !important; transition:none !important}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Web Application Threat Register</p>
+    <h1>Threat Index <span class="dim">/ ranked by severity</span></h1>
+    <p class="lede">Every common way a web application gets compromised — from the OWASP Top 10:2025 through cloud, Kubernetes, and network exposures — each with how it's exploited, how to fix it, and how to harden against it.</p>
+    <div class="meta-row">
+      <span id="apiBadge" class="api-badge offline"><span class="dot"></span><span id="apiText">checking source…</span></span>
+      <span class="src">Source · OWASP Top 10:2025 + infra register</span>
+    </div>
+  </header>
+
+  <section class="summary" id="summary" aria-label="Threat counts by severity"></section>
+
+  <div class="controls">
+    <div class="search">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="search" type="search" placeholder="Search threats, e.g. injection, IAM, secrets…" aria-label="Search threats" />
+    </div>
+    <select id="sort" aria-label="Sort order">
+      <option value="score">Sort · Threat score</option>
+      <option value="rank">Sort · OWASP rank</option>
+      <option value="title">Sort · A–Z</option>
+    </select>
+  </div>
+  <div class="chips" id="domainChips" role="group" aria-label="Filter by domain">
+    <button class="chip" data-dom="all" aria-pressed="true">All domains</button>
+    <button class="chip" data-dom="app" aria-pressed="false">App</button>
+    <button class="chip" data-dom="cloud" aria-pressed="false">Cloud</button>
+    <button class="chip" data-dom="network" aria-pressed="false">Network / K8s</button>
+  </div>
+  <div class="chips" id="sevChips" role="group" aria-label="Filter by severity" style="margin-top:8px">
+    <button class="chip" data-sev="all" aria-pressed="true">All severities</button>
+    <button class="chip" data-sev="critical" aria-pressed="false">Critical</button>
+    <button class="chip" data-sev="high" aria-pressed="false">High</button>
+    <button class="chip" data-sev="medium" aria-pressed="false">Medium</button>
+    <button class="chip" data-sev="low" aria-pressed="false">Low</button>
+  </div>
+
+  <main class="list" id="list" aria-live="polite"></main>
+
+  <footer>
+    Educational reference for hardening your own systems. Ranking reflects the OWASP Top 10:2025 order plus an indicative threat score for infra items. Deployed for study on Amazon EKS — try <code>GET /api/vulnerabilities</code>, <code>/healthz</code>, and <code>/api/burn</code>.
+  </footer>
+</div>
+
+<script>
+(function(){
+  var DOMAIN_LABEL = {app:"App", cloud:"Cloud", network:"Network / K8s"};
+  var SEV_ORDER = {critical:0, high:1, medium:2, low:3};
+  var data = [];
+  var state = {q:"", sort:"score", dom:"all", sev:"all"};
+
+  function embedded(){
+    try { return JSON.parse(document.getElementById("vuln-data").textContent); }
+    catch(e){ return []; }
+  }
+
+  function setBadge(live){
+    var b = document.getElementById("apiBadge"), t = document.getElementById("apiText");
+    if(live){ b.className="api-badge live"; t.textContent="API live · /api/vulnerabilities"; }
+    else { b.className="api-badge offline"; t.textContent="offline · embedded dataset"; }
+  }
+
+  function load(){
+    // Prefer the live API (proves the full-stack wiring when running on the cluster);
+    // fall back to the embedded dataset so the page works standalone.
+    fetch("/api/vulnerabilities", {cache:"no-store"})
+      .then(function(r){ if(!r.ok) throw new Error("no api"); return r.json(); })
+      .then(function(j){ data = j; setBadge(true); render(); renderSummary(); })
+      .catch(function(){ data = embedded(); setBadge(false); render(); renderSummary(); });
+  }
+
+  function renderSummary(){
+    var counts = {critical:0, high:0, medium:0, low:0};
+    data.forEach(function(d){ counts[d.severity]++; });
+    var cfg = [["crit","critical","Critical"],["high","high","High"],["med","medium","Medium"],["low","low","Low"]];
+    document.getElementById("summary").innerHTML = cfg.map(function(c){
+      return '<div class="stat '+c[0]+'"><div class="n">'+counts[c[1]]+'</div><div class="l">'+c[2]+'</div></div>';
+    }).join("");
+  }
+
+  function esc(s){ return String(s).replace(/[&<>]/g, function(m){ return {"&":"&amp;","<":"&lt;",">":"&gt;"}[m]; }); }
+
+  function visible(){
+    var out = data.filter(function(d){
+      if(state.dom!=="all" && d.domain!==state.dom) return false;
+      if(state.sev!=="all" && d.severity!==state.sev) return false;
+      if(state.q){
+        var hay = (d.title+" "+d.summary+" "+d.id+" "+(d.cwe||[]).join(" ")).toLowerCase();
+        if(hay.indexOf(state.q)===-1) return false;
+      }
+      return true;
+    });
+    out.sort(function(a,b){
+      if(state.sort==="title") return a.title.localeCompare(b.title);
+      if(state.sort==="rank"){
+        var ra = a.rank==null?999:a.rank, rb = b.rank==null?999:b.rank;
+        if(ra!==rb) return ra-rb; return b.score-a.score;
+      }
+      return b.score-a.score; // score
+    });
+    return out;
+  }
+
+  function listBlock(title, items){
+    return '<div class="block"><h4>'+title+'</h4><ul>'+items.map(function(i){return "<li>"+esc(i)+"</li>";}).join("")+'</ul></div>';
+  }
+
+  function render(){
+    var rows = visible();
+    var list = document.getElementById("list");
+    if(!rows.length){ list.innerHTML = '<div class="empty">No threats match these filters.</div>'; return; }
+    list.innerHTML = rows.map(function(d){
+      var rankTxt = d.rank==null ? "·" : d.rank;
+      var idBadge = d.rank==null ? '<span class="tag id">INFRA</span>' : '<span class="tag id">'+esc(d.id)+':2025</span>';
+      return ''+
+      '<article class="card sev-'+d.severity+'">'+
+        '<button class="head" aria-expanded="false">'+
+          '<div class="rank">'+rankTxt+'</div>'+
+          '<div class="htitle">'+
+            '<div class="tline">'+idBadge+
+              '<span class="tag dom-'+d.domain+'">'+DOMAIN_LABEL[d.domain]+'</span>'+
+              '<h3>'+esc(d.title)+'</h3>'+
+            '</div>'+
+            '<p class="sum">'+esc(d.summary)+'</p>'+
+          '</div>'+
+          '<div class="rt">'+
+            '<span class="sev">'+d.severity+'</span>'+
+            '<span class="score">'+d.score.toFixed(1)+'<small>/10</small></span>'+
+            '<svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>'+
+          '</div>'+
+        '</button>'+
+        '<div class="body"><div class="body-inner">'+
+          '<div class="block"><h4>How it\u2019s exploited</h4><p>'+esc(d.exploit)+'</p></div>'+
+          listBlock("How to fix", d.fixes)+
+          listBlock("How to harden", d.hardening)+
+          '<div class="infra"><h4>Cloud / Kubernetes angle</h4><p>'+esc(d.infra)+'</p></div>'+
+          (d.cwe&&d.cwe.length ? '<div class="cwe">'+d.cwe.map(function(c){return "<span>"+esc(c)+"</span>";}).join("")+'</div>' : '')+
+        '</div></div>'+
+      '</article>';
+    }).join("");
+
+    Array.prototype.forEach.call(list.querySelectorAll(".head"), function(btn){
+      btn.addEventListener("click", function(){
+        var card = btn.closest(".card"), body = card.querySelector(".body");
+        var open = card.classList.toggle("open");
+        btn.setAttribute("aria-expanded", open ? "true":"false");
+        body.style.maxHeight = open ? body.scrollHeight+"px" : "0";
+      });
+    });
+  }
+
+  document.getElementById("search").addEventListener("input", function(e){ state.q = e.target.value.toLowerCase().trim(); render(); });
+  document.getElementById("sort").addEventListener("change", function(e){ state.sort = e.target.value; render(); });
+
+  function wireChips(id, key){
+    var grp = document.getElementById(id);
+    grp.addEventListener("click", function(e){
+      var btn = e.target.closest(".chip"); if(!btn) return;
+      Array.prototype.forEach.call(grp.querySelectorAll(".chip"), function(c){ c.setAttribute("aria-pressed","false"); });
+      btn.setAttribute("aria-pressed","true");
+      state[key] = btn.getAttribute(key==="dom"?"data-dom":"data-sev");
+      render();
+    });
+  }
+  wireChips("domainChips","dom");
+  wireChips("sevChips","sev");
+
+  load();
+})();
+</script>
+</body>
+</html>
